@@ -1,9 +1,9 @@
 Package: com.82flex.singlemute
 Name: Single Mute
-Version: 0.0.1
+Version: 1.0
 Architecture: iphoneos-arm
-Description: An awesome MobileSubstrate tweak!
-Maintainer: 82Flex
-Author: 82Flex
+Description: Just a single mute icon on the status bar of iOS.
+Maintainer: 82Flex <82flex@gmail.com>
+Author: 82Flex <82flex@gmail.com>
 Section: Tweaks
-Depends: mobilesubstrate (>= 0.9.5000)
+Depends: firmware (>= 14.0), mobilesubstrate
