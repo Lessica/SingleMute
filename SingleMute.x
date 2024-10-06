@@ -18,8 +18,18 @@
 @property(nonatomic, strong) _UIStatusBarData *data;
 @end
 
+@interface UIStatusBarServer : NSObject
++ (const unsigned char *)getStatusBarData;
+@end
+
 @interface UIStatusBar_Base : UIView
+@property(nonatomic, strong) UIStatusBarServer *statusBarServer;
+- (void)reloadSingleMute;
 - (void)forceUpdateData:(BOOL)arg1;
+- (void)statusBarServer:(id)arg1 didReceiveStatusBarData:(const unsigned char *)arg2 withActions:(int)arg3;
+@end
+
+@interface UIStatusBar_Modern : UIStatusBar_Base
 @end
 
 @interface SMWeakContainer : NSObject
@@ -67,8 +77,8 @@ static unsigned char _sharedData[5000] = {0};
 
 %hook _UIStatusBarDataQuietModeEntry
 
-- (id)initFromData:(unsigned char *)arg1 type:(int)arg2 focusName:(const char *)arg3 maxFocusLength:(int)arg4 imageName:(const char*)arg5 maxImageLength:(int)arg6 boolValue:(BOOL)arg7 {
-    BOOL isQuietMode = arg1[2];
+- (id)initFromData:(unsigned char *)data type:(int)arg2 focusName:(const char *)arg3 maxFocusLength:(int)arg4 imageName:(const char*)arg5 maxImageLength:(int)arg6 boolValue:(BOOL)arg7 {
+    BOOL isQuietMode = data[2];
     if (!isQuietMode) {
         _sharedData[2] = [_ringerControl isRingerMuted];
         return %orig(_sharedData, arg2, "!Mute", arg4, arg5, arg6, arg7);
@@ -96,7 +106,7 @@ static unsigned char _sharedData[5000] = {0};
     %orig;
     for (SMWeakContainer *container in _weakContainers) {
         UIStatusBar_Base *statusBar = (UIStatusBar_Base *)container.object;
-        [statusBar forceUpdateData:YES];
+        [statusBar reloadSingleMute];
     }
 }
 
@@ -105,7 +115,7 @@ static unsigned char _sharedData[5000] = {0};
     %orig;
     for (SMWeakContainer *container in _weakContainers) {
         UIStatusBar_Base *statusBar = (UIStatusBar_Base *)container.object;
-        [statusBar forceUpdateData:YES];
+        [statusBar reloadSingleMute];
     }
 }
 
@@ -118,6 +128,14 @@ static unsigned char _sharedData[5000] = {0};
     container.object = self;
     [_weakContainers addObject:container];
     return %orig;
+}
+
+%new
+- (void)reloadSingleMute {
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        const unsigned char *data = [UIStatusBarServer getStatusBarData];
+        [self statusBarServer:self.statusBarServer didReceiveStatusBarData:data withActions:0];
+    });
 }
 
 %end
