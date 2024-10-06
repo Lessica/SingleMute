@@ -15,4 +15,13 @@ for TWEAK_NAME in $TWEAK_NAMES; do
   sudo cp -v $PWD/$TWEAK_NAME.plist /opt/simject
 done
 
+BUNDLE_NAMES="SingleMutePrefs"
+
+for BUNDLE_NAME in $BUNDLE_NAMES; do
+  sudo rm -rf /opt/simject/PreferenceBundles/$BUNDLE_NAME.bundle
+  sudo cp -rv $THEOS_OBJ_DIR/$BUNDLE_NAME.bundle /opt/simject/PreferenceBundles/$BUNDLE_NAME.bundle
+  sudo codesign -f -s - /opt/simject/PreferenceBundles/$BUNDLE_NAME.bundle
+  sudo cp -rv $PWD/$BUNDLE_NAME/layout/Library/PreferenceLoader/Preferences/$BUNDLE_NAME /opt/simject/PreferenceLoader/Preferences/
+done
+
 resim

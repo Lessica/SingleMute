@@ -29,11 +29,28 @@
 @implementation SMWeakContainer
 @end
 
+static BOOL kIsEnabled = YES;
+static BOOL kUseLowPriorityLocation = NO;
+
+static void ReloadPrefs() {
+    static NSUserDefaults *prefs = nil;
+    if (!prefs) {
+        prefs = [[NSUserDefaults alloc] initWithSuiteName:@"com.82flex.singlemuteprefs"];
+    }
+
+    NSDictionary *settings = [prefs dictionaryRepresentation];
+
+    kIsEnabled = settings[@"IsEnabled"] ? [settings[@"IsEnabled"] boolValue] : YES;
+    kUseLowPriorityLocation = settings[@"LowerPriorityForLocationIcon"] ? [settings[@"LowerPriorityForLocationIcon"] boolValue] : NO;
+}
+
 static SBRingerControl *_ringerControl = nil;
 static NSMutableSet<SMWeakContainer *> *_weakContainers = nil;
 
 // this is enough for the status bar legacy data
 static unsigned char _sharedData[5000] = {0};
+
+%group SingleMuteQuietMode
 
 %hook _UIStatusBarIndicatorQuietModeItem
 
@@ -55,19 +72,6 @@ static unsigned char _sharedData[5000] = {0};
     if (!isQuietMode) {
         _sharedData[2] = [_ringerControl isRingerMuted];
         return %orig(_sharedData, arg2, "!Mute", arg4, arg5, arg6, arg7);
-    }
-    return %orig;
-}
-
-%end
-
-%hook _UIStatusBarDataLocationEntry
-
-- (id)initFromData:(unsigned char *)arg1 type:(int)arg2 {
-    BOOL isRingerMuted = [_ringerControl isRingerMuted];
-    if (isRingerMuted) {
-        _sharedData[21] = 0;
-        return %orig(_sharedData, arg2);
     }
     return %orig;
 }
@@ -118,6 +122,35 @@ static unsigned char _sharedData[5000] = {0};
 
 %end
 
+%end // SingleMuteQuietMode
+
+%group SingleMuteLocation
+
+%hook _UIStatusBarDataLocationEntry
+
+- (id)initFromData:(unsigned char *)arg1 type:(int)arg2 {
+    BOOL isRingerMuted = [_ringerControl isRingerMuted];
+    if (isRingerMuted) {
+        _sharedData[21] = 0;
+        return %orig(_sharedData, arg2);
+    }
+    return %orig;
+}
+
+%end
+
+%end // SingleMuteLocation
+
 %ctor {
+    ReloadPrefs();
+    if (!kIsEnabled) {
+        return;
+    }
+
     _weakContainers = [NSMutableSet set];
+
+    %init(SingleMuteQuietMode);
+    if (kUseLowPriorityLocation) {
+        %init(SingleMuteLocation);
+    }
 }
